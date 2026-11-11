@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#4f46e5">
+<title>StudyMate</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#687386;--line:#e5e9f2;--primary:#4f46e5;--soft:#eef2ff;--danger:#dc2626}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;transition:.2s}
+body.dark{--bg:#101522;--card:#1b2232;--text:#edf2ff;--muted:#a5afc3;--line:#30394d;--primary:#818cf8;--soft:#252b49;--danger:#f87171}
+header{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-size:21px;font-weight:800;letter-spacing:-.5px}.brand span{color:var(--primary)}
+button{border:0;border-radius:11px;padding:11px 14px;background:var(--primary);color:white;font-weight:650;cursor:pointer;font-size:14px}
+button.secondary{background:var(--soft);color:var(--text)}button.danger{background:#fee2e2;color:#991b1b}body.dark button.danger{background:#44252c;color:#ffb4b4}
+#themeBtn{padding:9px 12px;font-size:18px;background:var(--soft);color:var(--text)}
+nav{display:flex;gap:6px;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--line);overflow:auto}
+.tab{background:transparent;color:var(--muted);white-space:nowrap}.tab.active{background:var(--soft);color:var(--primary)}
+main{max-width:760px;margin:auto;padding:18px 14px 36px}h1,h2,h3,p{margin-top:0}h2{font-size:20px;margin-bottom:12px}h3{font-size:16px;margin-bottom:4px}
+.muted{color:var(--muted);font-size:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:17px;padding:17px;margin:14px 0;box-shadow:0 3px 14px #10182808}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:18px 0}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 8px;text-align:center}.stat strong{display:block;font-size:25px;color:var(--primary)}.stat span{font-size:12px;color:var(--muted)}
+.form{display:grid;gap:10px}input,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--bg);color:var(--text);font:inherit;outline-color:var(--primary)}textarea{min-height:130px;resize:vertical}.search{margin:0 0 12px}
+.item{padding:14px 0;border-top:1px solid var(--line)}.itemhead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.pill{display:inline-block;background:var(--soft);color:var(--primary);padding:5px 9px;border-radius:999px;font-size:12px;font-weight:650;white-space:nowrap}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{padding:9px 12px}.empty{padding:15px 0;color:var(--muted);font-size:14px}.toprow{display:flex;justify-content:space-between;align-items:center;gap:10px}.reading{white-space:pre-wrap;line-height:1.8;margin-top:18px;font-size:18px;overflow-wrap:anywhere}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:12px}
+</style>
+</head>
+<body>
+<header><div class="brand">Study<span>Mate</span> 📚</div><button id="themeBtn" aria-label="Toggle dark mode">🌙</button></header>
+<nav>
+<button class="tab active" data-page="home">🏠 Home</button>
+<button class="tab" data-page="tasks">📝 Assignments</button>
+<button class="tab" data-page="notes">📖 Notes</button>
+</nav>
+<main id="main"></main><footer>StudyMate · Your learning, organized</footer>
+<script>
+const $=s=>document.querySelector(s);
+let tasks=JSON.parse(localStorage.tasks||'[]'),notes=JSON.parse(localStorage.notes||'[]'),page='home',reading=null;
+if(localStorage.dark==='1')document.body.classList.add('dark');
+$('#themeBtn').onclick=()=>{document.body.classList.toggle('dark');localStorage.dark=document.body.classList.contains('dark')?'1':'0';$('#themeBtn').textContent=document.body.classList.contains('dark')?'☀️':'🌙'};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{page=b.dataset.page;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));render()});
+function save(){localStorage.tasks=JSON.stringify(tasks);localStorage.notes=JSON.stringify(notes);render()}
+function esc(s=''){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function taskForm(){return `<div class="card"><h2>＋ Add assignment</h2><form id="taskForm" class="form"><input name="title" placeholder="Assignment title" required><input name="subject" placeholder="Subject (e.g. Economics)" required><input name="due" type="date"><button>Add assignment</button></form></div>`}
+function noteForm(){return `<div class="card"><h2>＋ Add note</h2><form id="noteForm" class="form"><input name="title" placeholder="Note title" required><input name="subject" placeholder="Subject" required><textarea name="body" placeholder="Write or paste your class notes..." required></textarea><button>Save note</button></form></div>`}
+function taskList(){return tasks.length?tasks.map((t,i)=>`<div class="item"><div class="itemhead"><div><h3>${esc(t.title)}</h3><span class="muted">${esc(t.subject)} · ${esc(t.due||'No deadline')}</span></div><span class="pill">${t.done?'Completed':'Pending'}</span></div><div class="actions"><button onclick="toggleTask(${i})">${t.done?'Undo':'Mark done'}</button><button class="secondary" onclick="deleteTask(${i})">Delete</button></div></div>`).join(''):'<div class="empty">No assignments yet. Add your first one above!</div>'}
+function noteList(){return notes.length?notes.map((n,i)=>`<div class="item"><div class="itemhead"><div><h3>${esc(n.title)}</h3><span class="muted">${esc(n.subject)} · ${esc(n.date)}</span></div></div><div class="actions"><button onclick="openNote(${i})">Read note</button><button class="secondary" onclick="editNote(${i})">Edit</button><button class="danger" onclick="deleteNote(${i})">Delete</button></div></div>`).join(''):'<div class="empty">No notes saved yet. Add your first note above!</div>'}
+window.toggleTask=i=>{tasks[i].done=!tasks[i].done;save()};
+window.deleteTask=i=>{if(confirm('Delete this assignment?')){tasks.splice(i,1);save()}};
+window.deleteNote=i=>{if(confirm('Delete this note?')){notes.splice(i,1);if(reading===i)reading=null;save()}};
+window.openNote=i=>{reading=i;page='read';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.page==='notes'));render()};
+window.editNote=i=>{let n=notes[i],title=prompt('Note title',n.title);if(title===null)return;let body=prompt('Note text',n.body);if(body!==null){n.title=title;n.body=body;save()}};
+function render(){let m=$('#main');
+if(page==='home'){m.innerHTML=`<h2>Welcome back 👋</h2><p class="muted">Your learning, organized.</p><div class="stats"><div class="stat"><strong>${tasks.filter(t=>!t.done).length}</strong><span>Pending</span></div><div class="stat"><strong>${tasks.filter(t=>t.done).length}</strong><span>Completed</span></div><div class="stat"><strong>${notes.length}</strong><span>Saved notes</span></div></div><div class="card"><h2>Recent assignments</h2>${taskList()}</div><div class="card"><h2>Recent notes</h2>${noteList()}</div>`}
+if(page==='tasks'){m.innerHTML=taskForm()+`<div class="card"><h2>Your assignments</h2><input class="search" id="taskSearch" placeholder="Search assignments...">${taskList()}</div>`;$('#taskForm').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target);tasks.unshift({title:f.get('title'),subject:f.get('subject'),due:f.get('due'),done:false});save()};$('#taskSearch').oninput=e=>{let q=e.target.value.toLowerCase();document.querySelectorAll('#main .item').forEach(x=>x.style.display=x.textContent.toLowerCase().includes(q)?'':'none')}}
+if(page==='notes'){m.innerHTML=noteForm()+`<div class="card"><h2>Your notes</h2><input class="search" id="noteSearch" placeholder="Search notes...">${noteList()}</div>`;$('#noteForm').onsubmit=e=>{e.preventDefault();let f=new FormData(e.target);notes.unshift({title:f.get('title'),subject:f.get('subject'),body:f.get('body'),date:new Date().toLocaleDateString()});save()};$('#noteSearch').oninput=e=>{let q=e.target.value.toLowerCase();document.querySelectorAll('#main .item').forEach(x=>x.style.display=x.textContent.toLowerCase().includes(q)?'':'none')}}
+if(page==='read'){let n=reading!==null?notes[reading]:null;m.innerHTML=n?`<div class="card"><div class="toprow"><span class="pill">${esc(n.subject)}</span><button class="secondary" onclick="reading=null;page='notes';render()">All notes</button></div><h2 style="margin-top:16px">${esc(n.title)}</h2><div class="actions"><button class="secondary" onclick="font(-1)">A−</button><button class="secondary" onclick="font(1)">A+</button></div><article class="reading" id="article">${esc(n.body)}</article></div>`:`<div class="card"><h2>Reading mode</h2><p class="muted">Choose a note to read comfortably.</p>${noteList()}</div>`}}
+window.font=d=>{let a=$('#article');a.style.fontSize=(parseFloat(getComputedStyle(a).fontSize)+d*2)+'px'};
+render();
+</script>
+</body></html>
